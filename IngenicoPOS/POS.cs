@@ -84,13 +84,15 @@ namespace IngenicoPOS
                 // Transaction wasn't successful :(
                 // Send ACK and return transaction unsuccessful
                 POSPort.Write(((char)0x06).ToString());
-                setResult(new SaleResult(false, lastPOSMsg));
+                setResult(new SaleResult(lastPOSMsg.DisplayMessage));
+                return;
             }
             else
             {
                 // Message probably not valid, send NACK
                 POSPort.Write(((char)0x15).ToString());
                 setResult(new SaleResult(false, null));
+                return;
             }
 
             // If everything goes as planned, this lines of code should be executed

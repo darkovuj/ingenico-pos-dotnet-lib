@@ -15,14 +15,14 @@ namespace IngenicoPOS {
 
         private Int64
             _transactionAmount,
-            _TIDNumber,
-            _MIDNumber,
             _PINBlock,
             _transactionAmountCash,
             _DCCNumber,
             _DCCAmount;
 
         private string
+            _MIDNumber,
+            _TIDNumber,
             _transactionType,
             _transactionFlag,
             _transactionDate,
@@ -67,7 +67,7 @@ namespace IngenicoPOS {
             _PINFlag;
 
 
-        public int TerminalID { get { return _terminalID; } }
+        public string TerminalID { get { return _TIDNumber; } }
         public string TransactionFlag { get { return _transactionFlag; } }
         public string TransactionType { get { return _transactionType; } }
         public Int64 TransactionAmount { get { return _transactionAmount; } }
@@ -76,6 +76,7 @@ namespace IngenicoPOS {
         public string CardDataSource { get { return _cardDataSource; } }
         public string AuthorizationCode { get { return _authorizationCode; } }
         public string CardNumber { get { return _cardNumber; } } 
+        public string DisplayMessage { get { return _displayMessage; } } 
         public POSMessage() {
         }
         public POSMessage(string parseData) {
@@ -110,9 +111,9 @@ namespace IngenicoPOS {
             /*
              * For some reason, the POS is not sending */
             // FS
-            _TIDNumber = Int64.Parse(parseArr[11]);
+            _TIDNumber = parseArr[11];
             // FS
-            _MIDNumber = Int64.Parse(parseArr[12]);
+            _MIDNumber = parseArr[12];
             // FS
             _companyName = parseArr[13];
             // FS FS FS FS FS FS FS
@@ -121,6 +122,7 @@ namespace IngenicoPOS {
             _inputData = parseArr[22];
             // FS
             _EMVData = parseArr[23];
+            /*
             // FS
             _signatureLinePrintFlag = ( parseArr[24] == "1" );
             // FS
@@ -139,7 +141,7 @@ namespace IngenicoPOS {
             _transactionStatus = parseArr[29];
             // FS
             _SPDHTerminalTotals = parseArr[30];
-           /* */
+           */
         }
     }
 }
