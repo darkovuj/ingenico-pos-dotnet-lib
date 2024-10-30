@@ -66,6 +66,8 @@ namespace IngenicoPOS {
             _moreMessagesFlag,
             _PINFlag;
 
+
+        public int TerminalID { get { return _terminalID; } }
         public string TransactionFlag { get { return _transactionFlag; } }
         public string TransactionType { get { return _transactionType; } }
         public Int64 TransactionAmount { get { return _transactionAmount; } }
@@ -73,6 +75,7 @@ namespace IngenicoPOS {
         public string TransactionTime { get { return _transactionTime; } }
         public string CardDataSource { get { return _cardDataSource; } }
         public string AuthorizationCode { get { return _authorizationCode; } }
+        public string CardNumber { get { return _cardNumber; } }
 
 
         public POSMessage() {
@@ -89,8 +92,10 @@ namespace IngenicoPOS {
             _transactionFlag = parseArr[0].Substring(13, 2);
             _transactionNumber = int.Parse(parseArr[0].Substring(15, 6));
             _batchNumber = int.Parse(parseArr[0].Substring(21, 4));
+
             _transactionDate = parseArr[0].Substring(25, 6);
             _transactionTime = parseArr[0].Substring(31, 6);
+           
             // FS
             _transactionAmount = Int64.Parse(parseArr[1]);
             // FS FS FS
@@ -105,7 +110,7 @@ namespace IngenicoPOS {
             _authorizationCode = parseArr[10];
 
             /*
-             * For some reason, the POS is not sending 
+             * For some reason, the POS is not sending */
             // FS
             _TIDNumber = Int64.Parse(parseArr[11]);
             // FS
@@ -136,7 +141,7 @@ namespace IngenicoPOS {
             _transactionStatus = parseArr[29];
             // FS
             _SPDHTerminalTotals = parseArr[30];
-            */
+           /* */
         }
     }
 }
