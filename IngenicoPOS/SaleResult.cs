@@ -5,6 +5,7 @@ using System.Text;
 namespace IngenicoPOS {
     public class SaleResult {
         private bool _success;
+        public string ErrorMessage { get; set; }
         private POSMessage _lastMessage;
 
         public bool Success { get { return _success; } }
@@ -14,6 +15,10 @@ namespace IngenicoPOS {
             this._success = success;
             this._lastMessage = lastMessage;
         }
-
+        public SaleResult(   string errorMessage)
+        {
+            this._success = false ;
+            this.ErrorMessage = errorMessage;
+        }
     }
 }

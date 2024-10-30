@@ -75,9 +75,7 @@ namespace IngenicoPOS {
         public string TransactionTime { get { return _transactionTime; } }
         public string CardDataSource { get { return _cardDataSource; } }
         public string AuthorizationCode { get { return _authorizationCode; } }
-        public string CardNumber { get { return _cardNumber; } }
-
-
+        public string CardNumber { get { return _cardNumber; } } 
         public POSMessage() {
         }
         public POSMessage(string parseData) {

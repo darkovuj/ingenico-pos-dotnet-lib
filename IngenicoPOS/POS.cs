@@ -1,9 +1,16 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO.Ports;
+using System.Threading.Tasks;
 
-namespace IngenicoPOS {
+namespace IngenicoPOS
+{
 
-    public class POS {
+    public class POS : IDisposable
+    {
+
+        TaskCompletionSource<SaleResult> _tcs;
+
         private SerialPort POSPort;
         private bool _connected = false;
 
@@ -13,22 +20,24 @@ namespace IngenicoPOS {
         public int CashierID = 0;
         public string Language = "00";
 
-        private bool receivedACK = false;
-        private bool receivedNACK = false;
-        private POSMessage lastPOSMsg;
 
         public bool IsConnected { get { return _connected; } }
 
-        public POS(string Port, int baud = 115200) {
+        public POS(string Port, int baud = 115200)
+        {
             // Initialize The Serial Port
             POSPort = new SerialPort(Port, baud, Parity.None, 8, StopBits.One);
             // Assign DataReceived event
             POSPort.DataReceived += new SerialDataReceivedEventHandler(pos_DataReceived);
         }
 
-        public SaleResult Sale(Int64 Amount) {
+        public Task<SaleResult> Sale(Int64 Amount)
+        {
+
             if (!_connected)
-                return new SaleResult(false, null);
+                return Task.FromResult(new SaleResult(false, null));
+
+            _tcs = new TaskCompletionSource<SaleResult>();
 
             // Build the message to send to the device
             ECRMessage msg = new ECRMessage();
@@ -51,81 +60,59 @@ namespace IngenicoPOS {
             /// After 1 second we send it the message once again, and hopefully it will receive it this time
             /// After 3 tries, the transaction will be marked as unsuccessful, with communication error.
 
-            int sendTry = 0;
-            int ms = 0;
-            bool success = false;
 
-            #region Waiting for ACK/NACK
+            return _tcs.Task;
+        }
 
-            while (true) {
-                if (receivedACK) {
-                    success = true;
-                    receivedACK = false;
-                    receivedNACK = false;
-                    break;
-                }
-                if (receivedNACK) {
-                    success = false;
-                    receivedACK = false;
-                    receivedNACK = false;
-                    break;
-                }
-                if (ms > 1000) {
-                    ms = 0;
-                    sendTry++;
-                    if (sendTry == 3)
-                        break;
-                    POSPort.Write(msg.Message);
-                }
-                System.Threading.Thread.Sleep(1);
-                ms++;
-            }
-
-            #endregion Waiting for ACK/NACK
-
-            if (!success)
-                return new SaleResult(false, null);
-
-            /// After we receive 0x06, we wait for the message on the end of the transaction that tells us
-            /// wether the transaction was successful or not, and other params such as cause, transaction date, amount, time etc...
-
-            #region Waiting for Message
-
-            lastPOSMsg = null;
-            while (lastPOSMsg == null) { }
-
-            #endregion Waiting for Message
+        void messageReceived(string message)
+        {
+            var lastPOSMsg = new POSMessage(message);
 
             /// Message received, check it and send the response if message is correct and
             /// if transaction was successful
             if (lastPOSMsg.TransactionFlag == Consts.TransactionFlag.ACCEPTED_WITH_AUTH ||
-                    lastPOSMsg.TransactionFlag == Consts.TransactionFlag.ACCEPTED_WITHOUT_AUTH) {
+                    lastPOSMsg.TransactionFlag == Consts.TransactionFlag.ACCEPTED_WITHOUT_AUTH)
+            {
                 // Transaction was successful :D
                 // Send ACK and return transaction successful
                 POSPort.Write(((char)0x06).ToString());
-            } else if (lastPOSMsg.TransactionFlag == Consts.TransactionFlag.REFUSED ||
+            }
+            else if (lastPOSMsg.TransactionFlag == Consts.TransactionFlag.REFUSED ||
                         lastPOSMsg.TransactionFlag == Consts.TransactionFlag.ERROR ||
-                        lastPOSMsg.TransactionFlag == Consts.TransactionFlag.COMMUNICATION_ERROR) {
+                        lastPOSMsg.TransactionFlag == Consts.TransactionFlag.COMMUNICATION_ERROR)
+            {
                 // Transaction wasn't successful :(
                 // Send ACK and return transaction unsuccessful
                 POSPort.Write(((char)0x06).ToString());
-                return new SaleResult(false, lastPOSMsg);
-            } else {
+                setResult(new SaleResult(false, lastPOSMsg));
+            }
+            else
+            {
                 // Message probably not valid, send NACK
                 POSPort.Write(((char)0x15).ToString());
-                return new SaleResult(false, null);
+                setResult(new SaleResult(false, null));
             }
 
             // If everything goes as planned, this lines of code should be executed
             NextTransactionNo++;
-            return new SaleResult(true, lastPOSMsg);
+            setResult(new SaleResult(true, lastPOSMsg));
         }
 
-        public bool Connect() {
-            try {
+        void setResult(SaleResult result)
+        {
+            _tcs.SetResult(result);
+
+            Disonnect();
+        }
+        public bool Connect()
+        {
+            try
+            {
                 POSPort.Open();
                 POSPort.ReadExisting(); // Clear the buffer
-            } catch (Exception) {
+            }
+            catch (Exception)
+            {
                 // In unlikely case of the port being used or some error..
                 _connected = false;
                 return false;
@@ -134,26 +121,46 @@ namespace IngenicoPOS {
             return true;
         }
 
-        public void Disonnect() {
-            try {
+        public void Disonnect()
+        {
+            try
+            {
                 POSPort.Close();
-            } catch (Exception) { }
+            }
+            catch (Exception) { }
             _connected = false;
         }
 
-        private void pos_DataReceived(object sender, SerialDataReceivedEventArgs e) {
+        private void pos_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
             string message = ((SerialPort)sender).ReadExisting();
             // Debug.WriteLine(BitConverter.ToString(System.Text.Encoding.Default.GetBytes(message)));  // Write HEX to the debug
+            Debug.WriteLine(message);
 
             if (message == ("\u0006"))
-                receivedACK = true; // Received ACK, set the flag
-            else if (message == ("\u0015"))
-                receivedNACK = true; // Received NACK, set the flag
-            else if (message.StartsWith("25")) {
-                POSPort.Write(((char)0x06).ToString()); // Received HOLD Message, send ACK to confirm the hold
-            } else {
-                lastPOSMsg = new POSMessage(message); // Received POSMessage, Parse it and assign it to lastPOSMsg
+            {  // Received ACK, set the flag
             }
+            else if (message == ("\u0015"))
+                setResult(new SaleResult(false, null));
+            else if (message.StartsWith("20"))
+            {
+                POSPort.Write(((char)0x06).ToString()); // Received HOLD Message, send ACK to confirm the hold
+            }
+            else if (message.StartsWith("22"))
+            {
+                var msg = message.Substring(9, message.Length-11);
+
+                setResult(new SaleResult(msg));
+            }
+            else
+            {
+                messageReceived(message);
+            }
+        }
+
+        public void Dispose()
+        {
+            Disonnect();
         }
     }
 }
