@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Serilog;
+using Serilog.Core;
+using System;
 using System.Diagnostics;
 using System.IO.Ports;
 using System.Threading.Tasks;
@@ -51,6 +53,9 @@ namespace IngenicoPOS
 
             // Clear the buffer
             POSPort.ReadExisting();
+
+            Log.Debug("Sending ECR message: {message}", msg.Message);
+
             // Send the message to the device
             POSPort.Write(msg.Message);
 
@@ -137,7 +142,8 @@ namespace IngenicoPOS
         {
             string message = ((SerialPort)sender).ReadExisting();
             // Debug.WriteLine(BitConverter.ToString(System.Text.Encoding.Default.GetBytes(message)));  // Write HEX to the debug
-            Debug.WriteLine(message);
+
+            Log.Debug("Received ECR message: {message}", message);            
 
             if (message == ("\u0006"))
             {  // Received ACK, set the flag
