@@ -143,22 +143,33 @@ namespace IngenicoPOS
             string message = ((SerialPort)sender).ReadExisting();
             // Debug.WriteLine(BitConverter.ToString(System.Text.Encoding.Default.GetBytes(message)));  // Write HEX to the debug
 
-            Log.Debug("Received ECR message: {message}", message);            
+            Log.Debug("Received ECR message: {message}", message);
 
             if (message == ("\u0006"))
             {  // Received ACK, set the flag
             }
             else if (message == ("\u0015"))
                 setResult(new SaleResult(false, null));
-            else if (message.StartsWith("20"))
+            else if (message.StartsWith("20") || message.StartsWith("25"))
             {
                 POSPort.Write(((char)0x06).ToString()); // Received HOLD Message, send ACK to confirm the hold
             }
             else if (message.StartsWith("22"))
             {
-                var msg = message.Substring(9, message.Length-11);
+                var msg = message.Substring(9, message.Length - 11);
 
+                POSPort.Write(((char)0x06).ToString()); // send ACK to confirm the message
                 setResult(new SaleResult(msg));
+
+            }
+            else if (message.StartsWith("26"))
+            {
+                var splited = message.Split((char)0x1c);
+                var msg = splited[0].Substring(9, splited[0].Length - 9);
+
+                POSPort.Write(((char)0x06).ToString()); // send ACK to confirm the message
+                setResult(new SaleResult(msg));
+
             }
             else
             {
