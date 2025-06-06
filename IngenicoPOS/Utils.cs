@@ -52,7 +52,7 @@ namespace IngenicoPOS {
             message = ((char)0x02).ToString() + message + (char)GetLRC(Encoding.ASCII.GetBytes(message));
             return message;
         }
-        private static int GetLRC(byte[] message) {
+        internal static int GetLRC(byte[] message) {
             int LRC = 0;
             foreach (byte a in message) {
                 LRC ^= a;
